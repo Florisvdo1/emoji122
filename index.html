@@ -2,27 +2,22 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<!-- Lock viewport for mobile, no zoom -->
+<!-- Lock viewport for mobile -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
-<title>Emoji Planner - Final Integrated Tutorial</title>
+<title>Emoji Planner - Final Integrated Tutorial (Homework Button Included)</title>
 <style>
   /* Global Setup */
   html, body {
     margin: 0; padding: 0; width: 100%; height: 100%;
     background: linear-gradient(120deg, #eef7ff, #99ccff);
     font-family: sans-serif;
-    user-select: none;
-    -webkit-user-select: none;
+    user-select: none; -webkit-user-select: none;
     touch-action: manipulation;
     overflow: hidden; /* no scrolling in main layout */
   }
 
-  /* We'll keep the app + tutorial logic in one page:
-     - main #appUI for the actual day sectors + deck
-     - tutorial scenes (#sceneIntro, #sceneDrag, #sceneHomework, #sceneReset, #sceneConclusion)
-  */
-
-  /* Hide scenes by default */
+  /* Scenes for the tutorial (Intro, Drag, Homework, Reset, Conclusion).
+     We'll hide them by default and show them as needed with "active". */
   .scene {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -35,10 +30,8 @@
   .scene.active {
     display: flex;
   }
-
-  /* Scene content styling */
   .scene-content {
-    max-width: 80vw; 
+    max-width: 80vw;
     background: #fff;
     padding: 1rem;
     border-radius: 12px;
@@ -53,35 +46,27 @@
     margin: 0.5rem 0 1rem;
   }
   .scene-buttons {
-    display: flex; 
-    justify-content: center; 
-    gap: 1rem; 
-    margin-top: 1rem;
+    display: flex; justify-content: center; gap: 1rem; margin-top: 1rem;
   }
   .scene-buttons button {
-    background: #66a3e0; 
-    color: #fff;
-    border: none; 
-    border-radius: 20px;
-    padding: 0.5rem 1rem; 
-    cursor: pointer;
+    background: #66a3e0; color: #fff;
+    border: none; border-radius: 20px;
+    padding: 0.5rem 1rem; cursor: pointer;
     box-shadow: 0 1px rgba(0,0,0,0.2);
   }
 
-  /* The main UI container => day sectors + emoji deck */
+  /* The main UI (#appUI) => hidden until tutorial ends or user skips. */
   #appUI {
-    display: none; /* hidden until tutorial is done or user skips */
+    display: none; 
     width: 100%; height: 100%;
     display: flex; flex-direction: column;
   }
 
-  /* Top bar => includes “Emoji Planner” label, search, reset, etc. */
+  /* Header bar => includes “Emoji Planner” label, search, reset, homework toggling. */
   header {
-    background: #66a3e0; 
-    color: #fff;
+    background: #66a3e0; color: #fff;
     padding: 0.8rem 1rem;
-    display: flex; align-items: center; 
-    justify-content: space-between;
+    display: flex; align-items: center; justify-content: space-between;
     box-shadow: 0 2px rgba(0,0,0,0.15);
     flex-shrink: 0;
   }
@@ -89,79 +74,79 @@
     display: flex; align-items: center; gap: 1rem;
   }
   header h1 {
-    margin: 0; 
-    font-size: 1.2rem;
+    margin: 0; font-size: 1.2rem;
   }
   .search-btn-top {
     background: #fff; color: #66a3e0; 
     border: none; border-radius: 20px;
     padding: 0.4rem 0.8rem; 
     font-size: 0.9rem;
-    cursor: pointer;
-    box-shadow: 0 1px rgba(0,0,0,0.2);
+    cursor: pointer; box-shadow: 0 1px rgba(0,0,0,0.2);
   }
   .search-bar {
-    display: none; 
-    margin-left: 1rem;
+    display: none; margin-left: 1rem;
   }
   .search-bar input {
     font-size: 0.9rem;
     padding: 0.3rem;
     border: 1px solid #ccc; border-radius: 4px;
   }
+
+  /* Buttons on right side of header => reset + homework */
+  .header-right-buttons {
+    display: flex; align-items: center; gap: 1rem;
+  }
   #resetBtn {
     background: #fff; color: #66a3e0; 
     border: none; border-radius: 20px;
     padding: 0.4rem 1rem; 
     font-size: 0.9rem;
-    cursor: pointer;
-    box-shadow: 0 1px rgba(0,0,0,0.2);
+    cursor: pointer; box-shadow: 0 1px rgba(0,0,0,0.2);
+  }
+  #homeworkBtn {
+    background: #fff; color: #66a3e0;
+    border: none; border-radius: 20px;
+    padding: 0.4rem 1rem; 
+    font-size: 0.9rem;
+    cursor: pointer; box-shadow: 0 1px rgba(0,0,0,0.2);
+    transition: background 0.3s;
+  }
+  #homeworkBtn.active {
+    background: #68c060; color: #fff; /* toggled green */
   }
 
   /* The main area => day sectors on left, deck on right */
   .main {
-    flex: 1; 
-    display: flex; 
-    overflow: hidden; /* no scroll in main layout */
+    flex: 1; display: flex; overflow: hidden; /* no scroll in main layout */
   }
 
-  /* Day Sectors => pinned left, placeholders squared */
+  /* Day Sectors => placeholders squared */
   .sectors {
     width: clamp(140px, 35vw, 300px);
     background: rgba(255,255,255,0.2);
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    justify-content: center;
-    padding: 0.5rem; 
-    box-sizing: border-box;
+    display: flex; flex-direction: column; 
+    align-items: center; justify-content: center;
+    padding: 0.5rem; box-sizing: border-box;
   }
   .sector {
     background: rgba(255,255,255,0.3);
-    margin: 0.4rem; 
-    padding: 0.5rem; 
+    margin: 0.4rem; padding: 0.5rem; 
     border-radius: 8px;
-    width: 90%; 
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    width: 90%; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
   }
   .sector h2 {
     margin: 0 0 0.5rem; 
-    font-size: 1rem; 
-    color: #003366; 
-    text-align: center;
+    font-size: 1rem; color: #003366; text-align: center;
   }
   .placeholder-grid {
-    display: grid;
+    display: grid; 
     grid-template-columns: repeat(2,1fr); 
     grid-template-rows: repeat(2,1fr);
     gap: 6px; 
-    justify-items: center; 
-    align-items: center;
+    justify-items: center; align-items: center;
   }
   .placeholder {
-    background: #eef; 
-    border: 1px solid #ccc; 
-    border-radius: 4px;
+    background: #eef; border: 1px solid #ccc; border-radius: 4px;
     width: clamp(40px, 9vw, 60px);
     height: clamp(40px, 9vw, 60px);
     display: flex; align-items: center; justify-content: center;
@@ -171,67 +156,58 @@
     background: #dde;
   }
 
-  /* Emoji deck => pinned right => 2 vertical columns => 8 rows => total 16 */
+  /* Emoji deck => pinned right => 2 vertical columns => total 16 emojis */
   .deck {
-    flex: 1; 
-    background: rgba(255,255,255,0.3);
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    justify-content: flex-start;
-    box-sizing: border-box; 
-    padding: 0.5rem;
+    flex: 1; background: rgba(255,255,255,0.3);
+    display: flex; flex-direction: column; 
+    align-items: center; justify-content: flex-start;
+    box-sizing: border-box; padding: 0.5rem;
   }
   .deck-header {
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    gap: 6px;
-    margin-bottom: 0.5rem;
-    width: 100%;
+    display: flex; align-items: center; 
+    justify-content: center; gap: 6px;
+    margin-bottom: 0.5rem; width: 100%;
   }
   .deck-title {
-    margin: 0; 
-    font-size: 1rem; 
-    color: #003366; 
-    font-weight: bold;
+    margin: 0; font-size: 1rem; 
+    color: #003366; font-weight: bold;
   }
   .arrow-btn {
-    background: #fff; color: #66a3e0;
+    background: #fff; color: #66a3e0; 
     border: none; border-radius: 50%;
-    width: 32px; height: 32px;
+    width: 32px; height: 32px; 
     font-size: 1rem;
     display: flex; align-items: center; justify-content: center;
     cursor: pointer;
     box-shadow: 0 1px rgba(0,0,0,0.2);
   }
 
+  /* 2 columns x 8 rows => total 16 => vertical arrangement */
   .emoji-grid {
     display: grid;
-    grid-template-columns: repeat(2,1fr); /* 2 columns side by side */
-    grid-template-rows: repeat(8,1fr);    /* 8 rows => total 16 cells */
+    grid-template-columns: repeat(2,1fr);
+    grid-template-rows: repeat(8,1fr);
     gap: 6px;
     width: clamp(200px, 55vw, 450px);
     height: clamp(280px, 70vh, 550px);
   }
   .emoji-item {
-    background: none;
-    border: none;
-    width: 100%; 
-    height: 100%;
+    background: none; border: none;
+    width: 100%; height: 100%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 1.2rem; 
-    color: #003366; 
-    cursor: grab;
+    font-size: 1.2rem; color: #003366; cursor: grab;
+  }
+  .emoji-item.dragging {
+    position: fixed; z-index: 9999; pointer-events: none;
+    opacity: 0.9; transform: scale(1.1);
   }
 
-  /* Drag => pinned under finger => top z-index => same size. */
-  .emoji-item.dragging {
-    position: fixed;
-    z-index: 9999;
-    pointer-events: none;
-    opacity: 0.9;
-    transform: scale(1.1);
+  /* Confetti effect container if needed */
+  #confettiCanvas {
+    position: fixed; top: 0; left: 0; pointer-events: none;
+    width: 100%; height: 100%; 
+    display: none; /* toggled only when homework done */
+    z-index: 9998; 
   }
 </style>
 </head>
@@ -285,13 +261,16 @@
 <div id="sceneConclusion" class="scene">
   <div class="scene-content">
     <h2>All Set!</h2>
-    <p>You’ve learned how to drag and drop emojis, toggle homework, and reset. Time to start planning!</p>
+    <p>You’ve learned how to drag/drop emojis, toggle homework, and reset. Time to start planning!</p>
     <div class="scene-buttons">
       <button id="conclusionReplayBtn">Replay Tutorial</button>
       <button id="conclusionDoneBtn">Done</button>
     </div>
   </div>
 </div>
+
+<!-- Confetti canvas for the homework effect -->
+<canvas id="confettiCanvas"></canvas>
 
 <!-- The main UI for the actual app -->
 <div id="appUI">
@@ -303,60 +282,55 @@
         <input type="text" placeholder="Search emojis..." id="searchInput"/>
       </span>
     </div>
-    <button id="resetBtn">Reset</button>
+    <!-- Right side => Reset + Homework buttons -->
+    <div class="header-right-buttons">
+      <button id="homeworkBtn">Homework</button>
+      <button id="resetBtn">Reset</button>
+    </div>
   </header>
+
   <div class="main">
-    <!-- Day Sectors -->
+    <!-- Day Sectors on left -->
     <div class="sectors" id="sectorsSide">
       <div class="sector">
         <h2>Morning</h2>
         <div class="placeholder-grid">
-          <div class="placeholder"></div>
-          <div class="placeholder"></div>
-          <div class="placeholder"></div>
-          <div class="placeholder"></div>
+          <div class="placeholder"></div><div class="placeholder"></div>
+          <div class="placeholder"></div><div class="placeholder"></div>
         </div>
       </div>
       <div class="sector">
         <h2>Midday</h2>
         <div class="placeholder-grid">
-          <div class="placeholder"></div>
-          <div class="placeholder"></div>
-          <div class="placeholder"></div>
-          <div class="placeholder"></div>
+          <div class="placeholder"></div><div class="placeholder"></div>
+          <div class="placeholder"></div><div class="placeholder"></div>
         </div>
       </div>
       <div class="sector">
         <h2>Evening</h2>
         <div class="placeholder-grid">
-          <div class="placeholder"></div>
-          <div class="placeholder"></div>
-          <div class="placeholder"></div>
-          <div class="placeholder"></div>
+          <div class="placeholder"></div><div class="placeholder"></div>
+          <div class="placeholder"></div><div class="placeholder"></div>
         </div>
       </div>
     </div>
 
-    <!-- Emoji Deck: 2 vertical columns x 8 rows => 16 emojis per category -->
+    <!-- Emoji Deck => 2 columns x 8 rows => vertical alignment -->
     <div class="deck">
       <div class="deck-header">
         <h3 class="deck-title" id="deckTitle">Emoji Deck - ???</h3>
         <button class="arrow-btn" id="arrowUp">↑</button>
         <button class="arrow-btn" id="arrowDown">↓</button>
       </div>
-      <div class="emoji-grid" id="emojiGrid">
-        <!-- JS populates with current category's 16 emojis in 2x8 vertical. -->
-      </div>
+      <div class="emoji-grid" id="emojiGrid"></div>
     </div>
   </div>
 </div>
 
 <script>
-/* ---------------------
-   1) TUTORIAL SCENE LOGIC
-   --------------------- */
+/* ================ 1) TUTORIAL SCENE LOGIC ================ */
 const scenes = ["sceneIntro","sceneDrag","sceneHomework","sceneReset","sceneConclusion"];
-let currentSceneIndex = 0; // 0 => Intro, 1 => Drag, 2 => Homework, 3 => Reset, 4 => Conclusion
+let currentSceneIndex = 0;
 
 function showScene(index){
   // Hide all scenes
@@ -364,14 +338,12 @@ function showScene(index){
   if(index >= 0 && index < scenes.length){
     document.getElementById(scenes[index]).classList.add('active');
     currentSceneIndex = index;
-  }
-  else {
-    // out of range => do nothing or show appUI
+  } else {
+    // Out of range => do nothing or show appUI
   }
 }
-
 function skipTutorial(){
-  // Hide all scenes, show appUI
+  // Hide all scenes => show appUI
   scenes.forEach(id => document.getElementById(id).classList.remove('active'));
   document.getElementById('appUI').style.display="flex";
 }
@@ -390,15 +362,10 @@ document.getElementById('resetBackBtn').addEventListener('click', ()=> showScene
 document.getElementById('resetNextBtn').addEventListener('click', ()=> showScene(4));
 
 document.getElementById('conclusionReplayBtn').addEventListener('click', ()=> showScene(0));
-document.getElementById('conclusionDoneBtn').addEventListener('click', ()=>{
-  // Hide tutorial, show main UI
-  skipTutorial();
-});
+document.getElementById('conclusionDoneBtn').addEventListener('click', skipTutorial);
 
-/* ---------------------
-   2) MAIN APP UI LOGIC
-   --------------------- */
-let dragItem=null;
+/* ================ 2) MAIN APP UI LOGIC ================ */
+let dragItem = null;
 
 /* Pinned-Under-Finger drag */
 function onTouchStart(e){
@@ -446,7 +413,7 @@ function positionDragElement(x,y){
   }
 }
 
-/* Arrow up/down for categories => 7 categories => 16 emojis each => 2 columns x 8 rows => total 16 */
+/* Categories => arrow up/down => 7 categories => 16 emojis each => 2 columns x 8 vertical */
 const categories = [
   { name:"Fruits", emojis:["🍎","🍊","🍋","🍌","🍇","🍉","🍓","🫐","🍈","🍒","🍍","🥭","🍑","🥝","🍐","🍏"]},
   { name:"Food", emojis:["🍔","🍕","🍟","🍗","🌭","🍿","🥪","🥙","🍣","🥟","🍝","🌮","🍦","🍰","🥞","🥓"]},
@@ -458,36 +425,35 @@ const categories = [
 ];
 let currentCategoryIndex=0;
 
-/* Renders current category => fill .emoji-grid with 16 emojis. */
 function renderCurrentCategory(){
-  const cat = categories[currentCategoryIndex];
+  const cat=categories[currentCategoryIndex];
   document.getElementById('deckTitle').textContent = `Emoji Deck - ${cat.name}`;
-  const grid = document.getElementById('emojiGrid');
+  const grid=document.getElementById('emojiGrid');
   grid.innerHTML='';
   cat.emojis.forEach(eChar=>{
-    const item = document.createElement('div');
+    const item=document.createElement('div');
     item.className='emoji-item';
     item.textContent=eChar;
     item.addEventListener('touchstart', onTouchStart, {passive:false});
     grid.appendChild(item);
   });
 }
-/* Arrow Up => prev category */
+/* Arrows => cycle categories */
 document.getElementById('arrowUp').addEventListener('click',()=>{
   currentCategoryIndex=(currentCategoryIndex-1+categories.length)%categories.length;
   renderCurrentCategory();
 });
-/* Arrow Down => next category */
 document.getElementById('arrowDown').addEventListener('click',()=>{
   currentCategoryIndex=(currentCategoryIndex+1)%categories.length;
   renderCurrentCategory();
 });
 
-/* Search toggling => top bar */
+/* Search toggling => top nav */
 let searchVisible=false;
 const topSearchBtn=document.getElementById('topSearchBtn');
 const searchBar=document.getElementById('searchBar');
 const searchInput=document.getElementById('searchInput');
+
 topSearchBtn.addEventListener('click',()=>{
   searchVisible=!searchVisible;
   searchBar.style.display=searchVisible?'inline-block':'none';
@@ -507,13 +473,13 @@ searchInput.addEventListener('input',()=>{
       const item=document.createElement('div');
       item.className='emoji-item';
       item.textContent=eChar;
-      item.addEventListener('touchstart', onTouchStart,{passive:false});
+      item.addEventListener('touchstart',onTouchStart,{passive:false});
       grid.appendChild(item);
     }
   });
 });
 
-/* Reset => clear placeholders */
+/* Reset => clears placeholders */
 document.getElementById('resetBtn').addEventListener('click',()=>{
   document.querySelectorAll('.placeholder').forEach(ph=>{
     ph.textContent='';
@@ -522,15 +488,98 @@ document.getElementById('resetBtn').addEventListener('click',()=>{
   alert("All placeholders cleared!");
 });
 
-/* Initialize the first category for the deck */
+/* Homework => toggles color + confetti effect */
+const homeworkBtn=document.getElementById('homeworkBtn');
+let homeworkActive=false;
+/* Minimal confetti effect => We'll do a quick pseudo-confetti
+   or placeholder for you to integrate a library if desired. */
+const confettiCanvas=document.getElementById('confettiCanvas');
+const ctx=confettiCanvas.getContext('2d');
+confettiCanvas.width=window.innerWidth; 
+confettiCanvas.height=window.innerHeight;
+
+homeworkBtn.addEventListener('click',()=>{
+  homeworkActive=!homeworkActive;
+  if(homeworkActive){
+    homeworkBtn.classList.add('active'); 
+    homeworkBtn.textContent="Homework ✅";
+
+    // Show quick confetti
+    confettiCanvas.style.display='block';
+    confettiBurst();
+    // Hide confetti after 1.5s
+    setTimeout(()=>{
+      confettiCanvas.style.display='none';
+      ctx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
+    },1500);
+
+  } else {
+    homeworkBtn.classList.remove('active');
+    homeworkBtn.textContent="Homework";
+  }
+});
+
+/* Very basic confetti implementation => spawn random squares for demonstration. 
+   Replace with a dedicated library for real confetti. */
+function confettiBurst(){
+  let confettiPieces=[];
+  for(let i=0; i<50; i++){
+    confettiPieces.push({
+      x: Math.random()*confettiCanvas.width,
+      y: Math.random()*confettiCanvas.height,
+      size: Math.random()*8+4,
+      color: `hsl(${Math.random()*360},100%,50%)`,
+      vy: (Math.random()*2 + 1)*-1
+    });
+  }
+  let frames=0;
+  function draw(){
+    frames++;
+    ctx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
+    confettiPieces.forEach((p)=>{
+      ctx.fillStyle=p.color;
+      ctx.fillRect(p.x,p.y,p.size,p.size);
+      p.y+=p.vy; 
+      p.vy+=0.05; // gravity
+    });
+    if(frames<60){ requestAnimationFrame(draw); }
+  }
+  draw();
+}
+
+/* Initialize the first category => displayed in the deck */
 renderCurrentCategory();
 
-/* The main UI (#appUI) will show after tutorial ends or user skips */
+/* Scenes start at Intro => main UI hidden => appUI style=none */
 function showMainUI(){
   document.getElementById('appUI').style.display="flex";
 }
 
-/* On initial load: Scenes start at intro with #sceneIntro active => #appUI hidden */
+/* TUTORIAL: Scenes => Intro (active by default),
+   If user “Done” or skip => skipTutorial => hide all scenes => show appUI. */
+function hideAllScenes(){
+  scenes.forEach(id => document.getElementById(id).classList.remove('active'));
+}
+function skipTutorial(){
+  hideAllScenes();
+  showMainUI();
+}
+
+/* SCENE EVENT LISTENERS */
+document.getElementById('introSkipBtn').addEventListener('click', skipTutorial);
+document.getElementById('introNextBtn').addEventListener('click', ()=> showScene(1));
+
+document.getElementById('dragBackBtn').addEventListener('click', ()=> showScene(0));
+document.getElementById('dragNextBtn').addEventListener('click', ()=> showScene(2));
+
+document.getElementById('homeworkBackBtn').addEventListener('click', ()=> showScene(1));
+document.getElementById('homeworkNextBtn').addEventListener('click', ()=> showScene(3));
+
+document.getElementById('resetBackBtn').addEventListener('click', ()=> showScene(2));
+document.getElementById('resetNextBtn').addEventListener('click', ()=> showScene(4));
+
+document.getElementById('conclusionReplayBtn').addEventListener('click', ()=> showScene(0));
+document.getElementById('conclusionDoneBtn').addEventListener('click', skipTutorial);
 </script>
 </body>
 </html>
