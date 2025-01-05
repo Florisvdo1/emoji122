@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<!-- Lock viewport, no zoom -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<title>Emoji Planner - Refined Deck Layout</title>
+<style>
+  /* Global Setup */
+  html, body {
+    margin:0; padding:0; width:100%; height:100%;
+    background:linear-gradient(120deg, #eef7ff, #99ccff);
+    font-family:sans-serif; 
+    overflow:hidden; /* No scrolling on main body */
+    user-select:none; -webkit-user-select:none;
+    touch-action:manipulation; 
+  }
+
+  /* Main container => header at top, then .main (left: day sectors, right: deck) */
+  .app {
+    display:flex; 
+    flex-direction:column; 
+    width:100%; 
+    height:100%;
+  }
+
+  /* Header => top bar containing search + reset */
+  header {
+    background:#66a3e0;
+    color:#fff;
+    padding:0.8rem 1rem;
+    display:flex; 
+    align-items:center; 
+    justify-content:space-between;
+    box-shadow:0 2px rgba(0,0,0,0.15);
+    flex-shrink:0;
+  }
+
+  /* Left group => “Emoji Planner” label + search button + search bar */
+  .left-group {
+    display:flex; 
+    align-items:center; 
+    gap:1rem;
+  }
+  header h1 {
+    margin:0; 
+    font-size:clamp(1rem, 2.5vw, 1.3rem);
+  }
+  .search-btn-top {
+    background:#fff; color:#66a3e0; 
+    border:none; border-radius:20px;
+    padding:0.4rem 0.8rem; 
+    font-size:clamp(0.8rem,2vw,1rem);
+    cursor:pointer; 
+    box-shadow:0 1px rgba(0,0,0,0.2);
+  }
+  .search-bar {
+    display:none; /* toggled on/off */
+    margin-left:1rem;
+  }
+  .search-bar input {
+    font-size:clamp(0.8rem,2vw,1rem);
+    padding:0.3rem;
+    border:1px solid #ccc; border-radius:4px;
+  }
+
+  /* Reset button on the right side */
+  #resetBtn {
+    background:#fff; color:#66a3e0; 
+    border:none; border-radius:20px;
+    padding:0.4rem 1rem; 
+    font-size:clamp(0.8rem,2vw,1rem);
+    cursor:pointer; 
+    box-shadow:0 1px rgba(0,0,0,0.2);
+  }
+
+  /* Main => day sectors on left, deck on right, no scroll needed. */
+  .main {
+    flex:1; 
+    display:flex; 
+    overflow:hidden;
+  }
+
+  /* Day Sectors => left side => placeholders are squared */
+  .sectors {
+    width:clamp(140px, 35vw, 300px);
+    background:rgba(255,255,255,0.2);
+    display:flex; 
+    flex-direction:column; 
+    align-items:center; 
+    justify-content:center;
+    padding:0.5rem; box-sizing:border-box;
+  }
+  .sector {
+    background:rgba(255,255,255,0.3);
+    margin:0.4rem; padding:0.5rem; 
+    border-radius:8px;
+    width:90%; box-shadow:0 2px 5px rgba(0,0,0,0.1);
+  }
+  .sector h2 {
+    margin:0 0 0.5rem; font-size:clamp(0.8rem,2vw,1rem); 
+    color:#003366; text-align:center;
+  }
+  .placeholder-grid {
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    grid-template-rows:repeat(2,1fr);
+    gap:6px; 
+    justify-items:center; 
+    align-items:center;
+  }
+  .placeholder {
+    background:#eef; 
+    border:1px solid #ccc; 
+    border-radius:4px;
+    width:clamp(40px,9vw,60px);
+    height:clamp(40px,9vw,60px);
+    display:flex; align-items:center; justify-content:center;
+    color:#003366; font-size:clamp(0.8rem,2vw,1rem);
+  }
+  .placeholder.has-emoji {
+    background:#dde;
+  }
+
+  /* Emoji deck => right side => 2 vertical columns => each with 8 emojis stacked => label & arrows are centered. */
+  .deck {
+    flex:1; 
+    background:rgba(255,255,255,0.3);
+    display:flex; 
+    flex-direction:column; 
+    align-items:center; 
+    justify-content:flex-start;
+    box-sizing:border-box; 
+    padding:0.5rem;
+  }
+
+  /* The deck label + arrows => center them collectively below the search bar. */
+  .deck-header {
+    display:flex;
+    align-items:center;
+    justify-content:center; 
+    gap:6px;
+    margin-bottom:0.5rem;
+    width:100%;
+  }
+
+  .deck-title {
+    margin:0; 
+    font-size:clamp(0.9rem,2vw,1.1rem); 
+    color:#003366; 
+    font-weight:bold;
+  }
+  .arrow-btn {
+    background:#fff; color:#66a3e0; 
+    border:none; border-radius:50%;
+    width:clamp(24px,6vw,32px); 
+    height:clamp(24px,6vw,32px);
+    font-size:clamp(0.9rem,2.5vw,1.1rem);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; 
+    box-shadow:0 1px rgba(0,0,0,0.2);
+  }
+
+  /* Two vertical columns => each 8 emojis => 16 total => each column is a stacked vertical “line” of 8. */
+  .emoji-grid {
+    display:grid;
+    grid-template-columns:repeat(2,1fr); /* 2 columns side by side */
+    grid-template-rows:repeat(8,1fr);   /* 8 rows stacked => total 16 */
+    gap:6px;
+    /* ensure it fits on iPhone portrait */
+    width:clamp(200px, 55vw, 450px);
+    height:clamp(280px, 70vh, 550px);
+  }
+
+  .emoji-item {
+    background:none; /* “naked” or minimal bounding */
+    border:none;
+    width:100%; height:100%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:clamp(1.1rem,2.5vw,1.4rem);
+    color:#003366; cursor:grab;
+  }
+
+  /* Drag => pinned under finger => top z-index => same size. */
+  .emoji-item.dragging {
+    position:fixed; 
+    z-index:9999; 
+    pointer-events:none; 
+    opacity:0.9; 
+    transform:scale(1.1);
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Top Header => includes search button next to "Emoji Planner" -->
+  <header>
+    <div class="left-group">
+      <h1>Emoji Planner</h1>
+      <button class="search-btn-top" id="topSearchBtn">Search</button>
+      <span class="search-bar" id="searchBar">
+        <input type="text" placeholder="Search emojis..." id="searchInput"/>
+      </span>
+    </div>
+    <button id="resetBtn">Reset</button>
+  </header>
+
+  <!-- Main => left (Day Sectors), right (Emoji Deck) -->
+  <div class="main">
+    <!-- Day Sectors -->
+    <div class="sectors" id="sectorsSide">
+      <div class="sector">
+        <h2>Morning</h2>
+        <div class="placeholder-grid">
+          <div class="placeholder"></div><div class="placeholder"></div>
+          <div class="placeholder"></div><div class="placeholder"></div>
+        </div>
+      </div>
+      <div class="sector">
+        <h2>Midday</h2>
+        <div class="placeholder-grid">
+          <div class="placeholder"></div><div class="placeholder"></div>
+          <div class="placeholder"></div><div class="placeholder"></div>
+        </div>
+      </div>
+      <div class="sector">
+        <h2>Evening</h2>
+        <div class="placeholder-grid">
+          <div class="placeholder"></div><div class="placeholder"></div>
+          <div class="placeholder"></div><div class="placeholder"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Emoji Deck => label with up/down arrows to the right, 
+         all centered horizontally => 2 vertical columns => total 16 emojis. -->
+    <div class="deck">
+      <!-- deck-header => center: label, left is label, right are arrows -->
+      <div class="deck-header">
+        <h3 class="deck-title" id="deckTitle">Emoji Deck</h3>
+        <button class="arrow-btn" id="arrowUp">↑</button>
+        <button class="arrow-btn" id="arrowDown">↓</button>
+      </div>
+      <div class="emoji-grid" id="emojiGrid">
+        <!-- 16 emojis => 2 columns × 8 rows => we cycle categories with arrow up/down. -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Basic pinned-under-finger drag & drop logic */
+let dragItem=null;
+function onTouchStart(e){
+  e.preventDefault();
+  dragItem=e.currentTarget;
+  dragItem.classList.add('dragging');
+  const touch=e.touches[0];
+  positionDragElement(touch.clientX, touch.clientY);
+
+  document.addEventListener('touchmove', onTouchMove,{passive:false});
+  document.addEventListener('touchend', onTouchEnd);
+}
+function onTouchMove(e){
+  e.preventDefault();
+  const touch=e.touches[0];
+  positionDragElement(touch.clientX, touch.clientY);
+}
+function onTouchEnd(e){
+  document.removeEventListener('touchmove',onTouchMove);
+  document.removeEventListener('touchend',onTouchEnd);
+
+  if(dragItem){
+    dragItem.classList.remove('dragging');
+    dragItem.style.position='';
+    dragItem.style.left='';
+    dragItem.style.top='';
+
+    const touch=e.changedTouches[0];
+    const dropTarget=document.elementFromPoint(touch.clientX, touch.clientY);
+    const placeholder=dropTarget? dropTarget.closest('.placeholder'):null;
+
+    if(placeholder && !placeholder.classList.contains('has-emoji')){
+      placeholder.textContent=dragItem.textContent;
+      placeholder.classList.add('has-emoji');
+    }
+    dragItem=null;
+  }
+}
+function positionDragElement(x,y){
+  if(dragItem){
+    const w=dragItem.offsetWidth;
+    const h=dragItem.offsetHeight;
+    dragItem.style.position='fixed';
+    dragItem.style.left=(x - w/2)+'px';
+    dragItem.style.top=(y - h/2)+'px';
+  }
+}
+
+/* 7 categories => each 16 emojis => we cycle them with arrowUp/arrowDown. */
+const categories = [
+  {
+    name:"Fruits",
+    emojis:["🍎","🍊","🍋","🍌","🍇","🍉","🍓","🫐",
+            "🍈","🍒","🍍","🥭","🍑","🥝","🍐","🍏"]
+  },
+  {
+    name:"Food",
+    emojis:["🍔","🍕","🍟","🍗","🌭","🍿","🥪","🥙",
+            "🍣","🥟","🍝","🌮","🍦","🍰","🥞","🥓"]
+  },
+  {
+    name:"Activities",
+    emojis:["🎉","🎮","⚽","🏀","🏓","🎳","🎱","🎧",
+            "🎨","🎸","🤿","🧩","🎲","🎯","🚴‍♂️","🏊‍♂️"]
+  },
+  {
+    name:"Objects",
+    emojis:["💻","📱","🎥","📷","🔑","🔒","⌚","📺",
+            "📅","🎁","🛏","🚪","📏","⚖️","💡","🧯"]
+  },
+  {
+    name:"Nature",
+    emojis:["☀️","⛅","🌧","⛈","❄️","🔥","💧","🌱",
+            "🌳","🌵","🌸","🌼","🍂","🌲","🍄","⚡"]
+  },
+  {
+    name:"Faces",
+    emojis:["😀","😂","😉","😍","😎","😤","😭","🤩",
+            "😡","😴","🤔","😱","🤠","🤫","🤯","🤗"]
+  },
+  {
+    name:"Misc",
+    emojis:["☕","🍷","🍺","🍭","🎂","🍒","🥑","🍗",
+            "🎃","🍪","🐶","🐱","🦄","🐸","🐰","🐹"]
+  },
+];
+let currentCategoryIndex=0;
+
+/* Renders the current category => fill #emojiGrid with 16 emojis in 2x8 vertical layout. */
+function renderCurrentCategory(){
+  const cat=categories[currentCategoryIndex];
+  document.getElementById('deckTitle').textContent=`Emoji Deck - ${cat.name}`;
+  const grid=document.getElementById('emojiGrid');
+  grid.innerHTML='';
+
+  cat.emojis.forEach(eChar=>{
+    const item=document.createElement('div');
+    item.className='emoji-item';
+    item.textContent=eChar;
+    item.addEventListener('touchstart',onTouchStart,{passive:false});
+    grid.appendChild(item);
+  });
+}
+
+/* Arrows => cycle categories */
+document.getElementById('arrowUp').addEventListener('click',()=>{
+  currentCategoryIndex=(currentCategoryIndex-1+categories.length)%categories.length;
+  renderCurrentCategory();
+});
+document.getElementById('arrowDown').addEventListener('click',()=>{
+  currentCategoryIndex=(currentCategoryIndex+1)%categories.length;
+  renderCurrentCategory();
+});
+
+/* Toggling search bar => filter the emojis in current category */
+let searchVisible=false;
+const topSearchBtn=document.getElementById('topSearchBtn');
+const searchBar=document.getElementById('searchBar');
+const searchInput=document.getElementById('searchInput');
+topSearchBtn.addEventListener('click',()=>{
+  searchVisible=!searchVisible;
+  searchBar.style.display=searchVisible?'inline-block':'none';
+  if(searchVisible){
+    searchInput.value='';
+    searchInput.focus();
+    renderCurrentCategory(); // resets if previously filtered
+  }
+});
+searchInput.addEventListener('input',()=>{
+  const keyword=searchInput.value.trim().toLowerCase();
+  const cat=categories[currentCategoryIndex];
+  const grid=document.getElementById('emojiGrid');
+  grid.innerHTML='';
+
+  cat.emojis.forEach(eChar=>{
+    if(eChar.toLowerCase().includes(keyword)){
+      const item=document.createElement('div');
+      item.className='emoji-item';
+      item.textContent=eChar;
+      item.addEventListener('touchstart',onTouchStart,{passive:false});
+      grid.appendChild(item);
+    }
+  });
+});
+
+/* Reset => clears placeholders */
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  document.querySelectorAll('.placeholder').forEach(ph=>{
+    ph.textContent='';
+    ph.classList.remove('has-emoji');
+  });
+  alert("All placeholders cleared!");
+});
+
+/* On page load => show category(0) */
+renderCurrentCategory();
+</script>
+</body>
+</html>
