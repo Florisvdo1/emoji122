@@ -2,198 +2,299 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<!-- Lock viewport, no zoom -->
+<!-- Lock viewport for mobile, no zoom -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
-<title>Emoji Planner - Refined Deck Layout</title>
+<title>Emoji Planner - Final Integrated Tutorial</title>
 <style>
   /* Global Setup */
   html, body {
-    margin:0; padding:0; width:100%; height:100%;
-    background:linear-gradient(120deg, #eef7ff, #99ccff);
-    font-family:sans-serif; 
-    overflow:hidden; /* No scrolling on main body */
-    user-select:none; -webkit-user-select:none;
-    touch-action:manipulation; 
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: linear-gradient(120deg, #eef7ff, #99ccff);
+    font-family: sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    overflow: hidden; /* no scrolling in main layout */
   }
 
-  /* Main container => header at top, then .main (left: day sectors, right: deck) */
-  .app {
-    display:flex; 
-    flex-direction:column; 
-    width:100%; 
-    height:100%;
+  /* We'll keep the app + tutorial logic in one page:
+     - main #appUI for the actual day sectors + deck
+     - tutorial scenes (#sceneIntro, #sceneDrag, #sceneHomework, #sceneReset, #sceneConclusion)
+  */
+
+  /* Hide scenes by default */
+  .scene {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    display: none; /* only the active scene is displayed */
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(4px);
+    z-index: 1000; /* on top of everything else */
+    align-items: center; justify-content: center;
+  }
+  .scene.active {
+    display: flex;
   }
 
-  /* Header => top bar containing search + reset */
+  /* Scene content styling */
+  .scene-content {
+    max-width: 80vw; 
+    background: #fff;
+    padding: 1rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    text-align: center;
+  }
+  .scene-content h1, .scene-content h2, .scene-content h3 {
+    margin: 0 0 1rem;
+    color: #003366;
+  }
+  .scene-content p {
+    margin: 0.5rem 0 1rem;
+  }
+  .scene-buttons {
+    display: flex; 
+    justify-content: center; 
+    gap: 1rem; 
+    margin-top: 1rem;
+  }
+  .scene-buttons button {
+    background: #66a3e0; 
+    color: #fff;
+    border: none; 
+    border-radius: 20px;
+    padding: 0.5rem 1rem; 
+    cursor: pointer;
+    box-shadow: 0 1px rgba(0,0,0,0.2);
+  }
+
+  /* The main UI container => day sectors + emoji deck */
+  #appUI {
+    display: none; /* hidden until tutorial is done or user skips */
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+  }
+
+  /* Top bar => includes “Emoji Planner” label, search, reset, etc. */
   header {
-    background:#66a3e0;
-    color:#fff;
-    padding:0.8rem 1rem;
-    display:flex; 
-    align-items:center; 
-    justify-content:space-between;
-    box-shadow:0 2px rgba(0,0,0,0.15);
-    flex-shrink:0;
+    background: #66a3e0; 
+    color: #fff;
+    padding: 0.8rem 1rem;
+    display: flex; align-items: center; 
+    justify-content: space-between;
+    box-shadow: 0 2px rgba(0,0,0,0.15);
+    flex-shrink: 0;
   }
-
-  /* Left group => “Emoji Planner” label + search button + search bar */
   .left-group {
-    display:flex; 
-    align-items:center; 
-    gap:1rem;
+    display: flex; align-items: center; gap: 1rem;
   }
   header h1 {
-    margin:0; 
-    font-size:clamp(1rem, 2.5vw, 1.3rem);
+    margin: 0; 
+    font-size: 1.2rem;
   }
   .search-btn-top {
-    background:#fff; color:#66a3e0; 
-    border:none; border-radius:20px;
-    padding:0.4rem 0.8rem; 
-    font-size:clamp(0.8rem,2vw,1rem);
-    cursor:pointer; 
-    box-shadow:0 1px rgba(0,0,0,0.2);
+    background: #fff; color: #66a3e0; 
+    border: none; border-radius: 20px;
+    padding: 0.4rem 0.8rem; 
+    font-size: 0.9rem;
+    cursor: pointer;
+    box-shadow: 0 1px rgba(0,0,0,0.2);
   }
   .search-bar {
-    display:none; /* toggled on/off */
-    margin-left:1rem;
+    display: none; 
+    margin-left: 1rem;
   }
   .search-bar input {
-    font-size:clamp(0.8rem,2vw,1rem);
-    padding:0.3rem;
-    border:1px solid #ccc; border-radius:4px;
+    font-size: 0.9rem;
+    padding: 0.3rem;
+    border: 1px solid #ccc; border-radius: 4px;
   }
-
-  /* Reset button on the right side */
   #resetBtn {
-    background:#fff; color:#66a3e0; 
-    border:none; border-radius:20px;
-    padding:0.4rem 1rem; 
-    font-size:clamp(0.8rem,2vw,1rem);
-    cursor:pointer; 
-    box-shadow:0 1px rgba(0,0,0,0.2);
+    background: #fff; color: #66a3e0; 
+    border: none; border-radius: 20px;
+    padding: 0.4rem 1rem; 
+    font-size: 0.9rem;
+    cursor: pointer;
+    box-shadow: 0 1px rgba(0,0,0,0.2);
   }
 
-  /* Main => day sectors on left, deck on right, no scroll needed. */
+  /* The main area => day sectors on left, deck on right */
   .main {
-    flex:1; 
-    display:flex; 
-    overflow:hidden;
+    flex: 1; 
+    display: flex; 
+    overflow: hidden; /* no scroll in main layout */
   }
 
-  /* Day Sectors => left side => placeholders are squared */
+  /* Day Sectors => pinned left, placeholders squared */
   .sectors {
-    width:clamp(140px, 35vw, 300px);
-    background:rgba(255,255,255,0.2);
-    display:flex; 
-    flex-direction:column; 
-    align-items:center; 
-    justify-content:center;
-    padding:0.5rem; box-sizing:border-box;
+    width: clamp(140px, 35vw, 300px);
+    background: rgba(255,255,255,0.2);
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center;
+    padding: 0.5rem; 
+    box-sizing: border-box;
   }
   .sector {
-    background:rgba(255,255,255,0.3);
-    margin:0.4rem; padding:0.5rem; 
-    border-radius:8px;
-    width:90%; box-shadow:0 2px 5px rgba(0,0,0,0.1);
+    background: rgba(255,255,255,0.3);
+    margin: 0.4rem; 
+    padding: 0.5rem; 
+    border-radius: 8px;
+    width: 90%; 
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
   }
   .sector h2 {
-    margin:0 0 0.5rem; font-size:clamp(0.8rem,2vw,1rem); 
-    color:#003366; text-align:center;
+    margin: 0 0 0.5rem; 
+    font-size: 1rem; 
+    color: #003366; 
+    text-align: center;
   }
   .placeholder-grid {
-    display:grid;
-    grid-template-columns:repeat(2,1fr);
-    grid-template-rows:repeat(2,1fr);
-    gap:6px; 
-    justify-items:center; 
-    align-items:center;
+    display: grid;
+    grid-template-columns: repeat(2,1fr); 
+    grid-template-rows: repeat(2,1fr);
+    gap: 6px; 
+    justify-items: center; 
+    align-items: center;
   }
   .placeholder {
-    background:#eef; 
-    border:1px solid #ccc; 
-    border-radius:4px;
-    width:clamp(40px,9vw,60px);
-    height:clamp(40px,9vw,60px);
-    display:flex; align-items:center; justify-content:center;
-    color:#003366; font-size:clamp(0.8rem,2vw,1rem);
+    background: #eef; 
+    border: 1px solid #ccc; 
+    border-radius: 4px;
+    width: clamp(40px, 9vw, 60px);
+    height: clamp(40px, 9vw, 60px);
+    display: flex; align-items: center; justify-content: center;
+    color: #003366; font-size: 0.9rem;
   }
   .placeholder.has-emoji {
-    background:#dde;
+    background: #dde;
   }
 
-  /* Emoji deck => right side => 2 vertical columns => each with 8 emojis stacked => label & arrows are centered. */
+  /* Emoji deck => pinned right => 2 vertical columns => 8 rows => total 16 */
   .deck {
-    flex:1; 
-    background:rgba(255,255,255,0.3);
-    display:flex; 
-    flex-direction:column; 
-    align-items:center; 
-    justify-content:flex-start;
-    box-sizing:border-box; 
-    padding:0.5rem;
+    flex: 1; 
+    background: rgba(255,255,255,0.3);
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: flex-start;
+    box-sizing: border-box; 
+    padding: 0.5rem;
   }
-
-  /* The deck label + arrows => center them collectively below the search bar. */
   .deck-header {
-    display:flex;
-    align-items:center;
-    justify-content:center; 
-    gap:6px;
-    margin-bottom:0.5rem;
-    width:100%;
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    gap: 6px;
+    margin-bottom: 0.5rem;
+    width: 100%;
   }
-
   .deck-title {
-    margin:0; 
-    font-size:clamp(0.9rem,2vw,1.1rem); 
-    color:#003366; 
-    font-weight:bold;
+    margin: 0; 
+    font-size: 1rem; 
+    color: #003366; 
+    font-weight: bold;
   }
   .arrow-btn {
-    background:#fff; color:#66a3e0; 
-    border:none; border-radius:50%;
-    width:clamp(24px,6vw,32px); 
-    height:clamp(24px,6vw,32px);
-    font-size:clamp(0.9rem,2.5vw,1.1rem);
-    display:flex; align-items:center; justify-content:center;
-    cursor:pointer; 
-    box-shadow:0 1px rgba(0,0,0,0.2);
+    background: #fff; color: #66a3e0;
+    border: none; border-radius: 50%;
+    width: 32px; height: 32px;
+    font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 1px rgba(0,0,0,0.2);
   }
 
-  /* Two vertical columns => each 8 emojis => 16 total => each column is a stacked vertical “line” of 8. */
   .emoji-grid {
-    display:grid;
-    grid-template-columns:repeat(2,1fr); /* 2 columns side by side */
-    grid-template-rows:repeat(8,1fr);   /* 8 rows stacked => total 16 */
-    gap:6px;
-    /* ensure it fits on iPhone portrait */
-    width:clamp(200px, 55vw, 450px);
-    height:clamp(280px, 70vh, 550px);
+    display: grid;
+    grid-template-columns: repeat(2,1fr); /* 2 columns side by side */
+    grid-template-rows: repeat(8,1fr);    /* 8 rows => total 16 cells */
+    gap: 6px;
+    width: clamp(200px, 55vw, 450px);
+    height: clamp(280px, 70vh, 550px);
   }
-
   .emoji-item {
-    background:none; /* “naked” or minimal bounding */
-    border:none;
-    width:100%; height:100%;
-    display:flex; align-items:center; justify-content:center;
-    font-size:clamp(1.1rem,2.5vw,1.4rem);
-    color:#003366; cursor:grab;
+    background: none;
+    border: none;
+    width: 100%; 
+    height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; 
+    color: #003366; 
+    cursor: grab;
   }
 
   /* Drag => pinned under finger => top z-index => same size. */
   .emoji-item.dragging {
-    position:fixed; 
-    z-index:9999; 
-    pointer-events:none; 
-    opacity:0.9; 
-    transform:scale(1.1);
+    position: fixed;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0.9;
+    transform: scale(1.1);
   }
 </style>
 </head>
 <body>
-<div class="app">
-  <!-- Top Header => includes search button next to "Emoji Planner" -->
+<!-- Scenes for tutorial -->
+<div id="sceneIntro" class="scene active">
+  <div class="scene-content">
+    <h1>Welcome to Emoji Planner!</h1>
+    <p>Plan your day with fun emojis. Meet Alex, planning a busy day with emojis!</p>
+    <div class="scene-buttons">
+      <button id="introSkipBtn">Skip</button>
+      <button id="introNextBtn">Next</button>
+    </div>
+  </div>
+</div>
+
+<div id="sceneDrag" class="scene">
+  <div class="scene-content">
+    <h2>Drag & Drop</h2>
+    <p>Try dragging an emoji to the Morning, Midday, or Evening slots.</p>
+    <p>(A short animated hand gesture or highlight can appear here.)</p>
+    <div class="scene-buttons">
+      <button id="dragBackBtn">Back</button>
+      <button id="dragNextBtn">Next</button>
+    </div>
+  </div>
+</div>
+
+<div id="sceneHomework" class="scene">
+  <div class="scene-content">
+    <h2>Homework Button</h2>
+    <p>Tapping the Homework button turns it green and triggers a short confetti effect!</p>
+    <div class="scene-buttons">
+      <button id="homeworkBackBtn">Back</button>
+      <button id="homeworkNextBtn">Next</button>
+    </div>
+  </div>
+</div>
+
+<div id="sceneReset" class="scene">
+  <div class="scene-content">
+    <h2>Reset Button</h2>
+    <p>Quickly clear all placeholders at once. Keep your plan fresh!</p>
+    <div class="scene-buttons">
+      <button id="resetBackBtn">Back</button>
+      <button id="resetNextBtn">Next</button>
+    </div>
+  </div>
+</div>
+
+<div id="sceneConclusion" class="scene">
+  <div class="scene-content">
+    <h2>All Set!</h2>
+    <p>You’ve learned how to drag and drop emojis, toggle homework, and reset. Time to start planning!</p>
+    <div class="scene-buttons">
+      <button id="conclusionReplayBtn">Replay Tutorial</button>
+      <button id="conclusionDoneBtn">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- The main UI for the actual app -->
+<div id="appUI">
   <header>
     <div class="left-group">
       <h1>Emoji Planner</h1>
@@ -204,71 +305,120 @@
     </div>
     <button id="resetBtn">Reset</button>
   </header>
-
-  <!-- Main => left (Day Sectors), right (Emoji Deck) -->
   <div class="main">
     <!-- Day Sectors -->
     <div class="sectors" id="sectorsSide">
       <div class="sector">
         <h2>Morning</h2>
         <div class="placeholder-grid">
-          <div class="placeholder"></div><div class="placeholder"></div>
-          <div class="placeholder"></div><div class="placeholder"></div>
+          <div class="placeholder"></div>
+          <div class="placeholder"></div>
+          <div class="placeholder"></div>
+          <div class="placeholder"></div>
         </div>
       </div>
       <div class="sector">
         <h2>Midday</h2>
         <div class="placeholder-grid">
-          <div class="placeholder"></div><div class="placeholder"></div>
-          <div class="placeholder"></div><div class="placeholder"></div>
+          <div class="placeholder"></div>
+          <div class="placeholder"></div>
+          <div class="placeholder"></div>
+          <div class="placeholder"></div>
         </div>
       </div>
       <div class="sector">
         <h2>Evening</h2>
         <div class="placeholder-grid">
-          <div class="placeholder"></div><div class="placeholder"></div>
-          <div class="placeholder"></div><div class="placeholder"></div>
+          <div class="placeholder"></div>
+          <div class="placeholder"></div>
+          <div class="placeholder"></div>
+          <div class="placeholder"></div>
         </div>
       </div>
     </div>
 
-    <!-- Emoji Deck => label with up/down arrows to the right, 
-         all centered horizontally => 2 vertical columns => total 16 emojis. -->
+    <!-- Emoji Deck: 2 vertical columns x 8 rows => 16 emojis per category -->
     <div class="deck">
-      <!-- deck-header => center: label, left is label, right are arrows -->
       <div class="deck-header">
-        <h3 class="deck-title" id="deckTitle">Emoji Deck</h3>
+        <h3 class="deck-title" id="deckTitle">Emoji Deck - ???</h3>
         <button class="arrow-btn" id="arrowUp">↑</button>
         <button class="arrow-btn" id="arrowDown">↓</button>
       </div>
       <div class="emoji-grid" id="emojiGrid">
-        <!-- 16 emojis => 2 columns × 8 rows => we cycle categories with arrow up/down. -->
+        <!-- JS populates with current category's 16 emojis in 2x8 vertical. -->
       </div>
     </div>
   </div>
 </div>
 
 <script>
-/* Basic pinned-under-finger drag & drop logic */
+/* ---------------------
+   1) TUTORIAL SCENE LOGIC
+   --------------------- */
+const scenes = ["sceneIntro","sceneDrag","sceneHomework","sceneReset","sceneConclusion"];
+let currentSceneIndex = 0; // 0 => Intro, 1 => Drag, 2 => Homework, 3 => Reset, 4 => Conclusion
+
+function showScene(index){
+  // Hide all scenes
+  scenes.forEach(id => document.getElementById(id).classList.remove('active'));
+  if(index >= 0 && index < scenes.length){
+    document.getElementById(scenes[index]).classList.add('active');
+    currentSceneIndex = index;
+  }
+  else {
+    // out of range => do nothing or show appUI
+  }
+}
+
+function skipTutorial(){
+  // Hide all scenes, show appUI
+  scenes.forEach(id => document.getElementById(id).classList.remove('active'));
+  document.getElementById('appUI').style.display="flex";
+}
+
+// Scene event listeners
+document.getElementById('introSkipBtn').addEventListener('click', skipTutorial);
+document.getElementById('introNextBtn').addEventListener('click', ()=> showScene(1));
+
+document.getElementById('dragBackBtn').addEventListener('click', ()=> showScene(0));
+document.getElementById('dragNextBtn').addEventListener('click', ()=> showScene(2));
+
+document.getElementById('homeworkBackBtn').addEventListener('click', ()=> showScene(1));
+document.getElementById('homeworkNextBtn').addEventListener('click', ()=> showScene(3));
+
+document.getElementById('resetBackBtn').addEventListener('click', ()=> showScene(2));
+document.getElementById('resetNextBtn').addEventListener('click', ()=> showScene(4));
+
+document.getElementById('conclusionReplayBtn').addEventListener('click', ()=> showScene(0));
+document.getElementById('conclusionDoneBtn').addEventListener('click', ()=>{
+  // Hide tutorial, show main UI
+  skipTutorial();
+});
+
+/* ---------------------
+   2) MAIN APP UI LOGIC
+   --------------------- */
 let dragItem=null;
+
+/* Pinned-Under-Finger drag */
 function onTouchStart(e){
   e.preventDefault();
-  dragItem=e.currentTarget;
+  dragItem = e.currentTarget;
   dragItem.classList.add('dragging');
-  const touch=e.touches[0];
+  const touch = e.touches[0];
   positionDragElement(touch.clientX, touch.clientY);
 
-  document.addEventListener('touchmove', onTouchMove,{passive:false});
+  document.addEventListener('touchmove', onTouchMove, {passive:false});
   document.addEventListener('touchend', onTouchEnd);
 }
 function onTouchMove(e){
   e.preventDefault();
-  const touch=e.touches[0];
+  const touch = e.touches[0];
   positionDragElement(touch.clientX, touch.clientY);
 }
 function onTouchEnd(e){
-  document.removeEventListener('touchmove',onTouchMove);
-  document.removeEventListener('touchend',onTouchEnd);
+  document.removeEventListener('touchmove', onTouchMove);
+  document.removeEventListener('touchend', onTouchEnd);
 
   if(dragItem){
     dragItem.classList.remove('dragging');
@@ -277,11 +427,10 @@ function onTouchEnd(e){
     dragItem.style.top='';
 
     const touch=e.changedTouches[0];
-    const dropTarget=document.elementFromPoint(touch.clientX, touch.clientY);
-    const placeholder=dropTarget? dropTarget.closest('.placeholder'):null;
-
+    const dropTarget=document.elementFromPoint(touch.clientX,touch.clientY);
+    const placeholder = dropTarget ? dropTarget.closest('.placeholder') : null;
     if(placeholder && !placeholder.classList.contains('has-emoji')){
-      placeholder.textContent=dragItem.textContent;
+      placeholder.textContent = dragItem.textContent;
       placeholder.classList.add('has-emoji');
     }
     dragItem=null;
@@ -297,73 +446,44 @@ function positionDragElement(x,y){
   }
 }
 
-/* 7 categories => each 16 emojis => we cycle them with arrowUp/arrowDown. */
+/* Arrow up/down for categories => 7 categories => 16 emojis each => 2 columns x 8 rows => total 16 */
 const categories = [
-  {
-    name:"Fruits",
-    emojis:["🍎","🍊","🍋","🍌","🍇","🍉","🍓","🫐",
-            "🍈","🍒","🍍","🥭","🍑","🥝","🍐","🍏"]
-  },
-  {
-    name:"Food",
-    emojis:["🍔","🍕","🍟","🍗","🌭","🍿","🥪","🥙",
-            "🍣","🥟","🍝","🌮","🍦","🍰","🥞","🥓"]
-  },
-  {
-    name:"Activities",
-    emojis:["🎉","🎮","⚽","🏀","🏓","🎳","🎱","🎧",
-            "🎨","🎸","🤿","🧩","🎲","🎯","🚴‍♂️","🏊‍♂️"]
-  },
-  {
-    name:"Objects",
-    emojis:["💻","📱","🎥","📷","🔑","🔒","⌚","📺",
-            "📅","🎁","🛏","🚪","📏","⚖️","💡","🧯"]
-  },
-  {
-    name:"Nature",
-    emojis:["☀️","⛅","🌧","⛈","❄️","🔥","💧","🌱",
-            "🌳","🌵","🌸","🌼","🍂","🌲","🍄","⚡"]
-  },
-  {
-    name:"Faces",
-    emojis:["😀","😂","😉","😍","😎","😤","😭","🤩",
-            "😡","😴","🤔","😱","🤠","🤫","🤯","🤗"]
-  },
-  {
-    name:"Misc",
-    emojis:["☕","🍷","🍺","🍭","🎂","🍒","🥑","🍗",
-            "🎃","🍪","🐶","🐱","🦄","🐸","🐰","🐹"]
-  },
+  { name:"Fruits", emojis:["🍎","🍊","🍋","🍌","🍇","🍉","🍓","🫐","🍈","🍒","🍍","🥭","🍑","🥝","🍐","🍏"]},
+  { name:"Food", emojis:["🍔","🍕","🍟","🍗","🌭","🍿","🥪","🥙","🍣","🥟","🍝","🌮","🍦","🍰","🥞","🥓"]},
+  { name:"Activities", emojis:["🎉","🎮","⚽","🏀","🏓","🎳","🎱","🎧","🎨","🎸","🤿","🧩","🎲","🎯","🚴‍♂️","🏊‍♂️"]},
+  { name:"Objects", emojis:["💻","📱","🎥","📷","🔑","🔒","⌚","📺","📅","🎁","🛏","🚪","📏","⚖️","💡","🧯"]},
+  { name:"Nature", emojis:["☀️","⛅","🌧","⛈","❄️","🔥","💧","🌱","🌳","🌵","🌸","🌼","🍂","🌲","🍄","⚡"]},
+  { name:"Faces", emojis:["😀","😂","😉","😍","😎","😤","😭","🤩","😡","😴","🤔","😱","🤠","🤫","🤯","🤗"]},
+  { name:"Misc", emojis:["☕","🍷","🍺","🍭","🎂","🍒","🥑","🍗","🎃","🍪","🐶","🐱","🦄","🐸","🐰","🐹"]},
 ];
 let currentCategoryIndex=0;
 
-/* Renders the current category => fill #emojiGrid with 16 emojis in 2x8 vertical layout. */
+/* Renders current category => fill .emoji-grid with 16 emojis. */
 function renderCurrentCategory(){
-  const cat=categories[currentCategoryIndex];
-  document.getElementById('deckTitle').textContent=`Emoji Deck - ${cat.name}`;
-  const grid=document.getElementById('emojiGrid');
+  const cat = categories[currentCategoryIndex];
+  document.getElementById('deckTitle').textContent = `Emoji Deck - ${cat.name}`;
+  const grid = document.getElementById('emojiGrid');
   grid.innerHTML='';
-
   cat.emojis.forEach(eChar=>{
-    const item=document.createElement('div');
+    const item = document.createElement('div');
     item.className='emoji-item';
     item.textContent=eChar;
-    item.addEventListener('touchstart',onTouchStart,{passive:false});
+    item.addEventListener('touchstart', onTouchStart, {passive:false});
     grid.appendChild(item);
   });
 }
-
-/* Arrows => cycle categories */
+/* Arrow Up => prev category */
 document.getElementById('arrowUp').addEventListener('click',()=>{
   currentCategoryIndex=(currentCategoryIndex-1+categories.length)%categories.length;
   renderCurrentCategory();
 });
+/* Arrow Down => next category */
 document.getElementById('arrowDown').addEventListener('click',()=>{
   currentCategoryIndex=(currentCategoryIndex+1)%categories.length;
   renderCurrentCategory();
 });
 
-/* Toggling search bar => filter the emojis in current category */
+/* Search toggling => top bar */
 let searchVisible=false;
 const topSearchBtn=document.getElementById('topSearchBtn');
 const searchBar=document.getElementById('searchBar');
@@ -374,7 +494,7 @@ topSearchBtn.addEventListener('click',()=>{
   if(searchVisible){
     searchInput.value='';
     searchInput.focus();
-    renderCurrentCategory(); // resets if previously filtered
+    renderCurrentCategory(); // reset if previously filtered
   }
 });
 searchInput.addEventListener('input',()=>{
@@ -382,19 +502,18 @@ searchInput.addEventListener('input',()=>{
   const cat=categories[currentCategoryIndex];
   const grid=document.getElementById('emojiGrid');
   grid.innerHTML='';
-
   cat.emojis.forEach(eChar=>{
     if(eChar.toLowerCase().includes(keyword)){
       const item=document.createElement('div');
       item.className='emoji-item';
       item.textContent=eChar;
-      item.addEventListener('touchstart',onTouchStart,{passive:false});
+      item.addEventListener('touchstart', onTouchStart,{passive:false});
       grid.appendChild(item);
     }
   });
 });
 
-/* Reset => clears placeholders */
+/* Reset => clear placeholders */
 document.getElementById('resetBtn').addEventListener('click',()=>{
   document.querySelectorAll('.placeholder').forEach(ph=>{
     ph.textContent='';
@@ -403,8 +522,15 @@ document.getElementById('resetBtn').addEventListener('click',()=>{
   alert("All placeholders cleared!");
 });
 
-/* On page load => show category(0) */
+/* Initialize the first category for the deck */
 renderCurrentCategory();
+
+/* The main UI (#appUI) will show after tutorial ends or user skips */
+function showMainUI(){
+  document.getElementById('appUI').style.display="flex";
+}
+
+/* On initial load: Scenes start at intro with #sceneIntro active => #appUI hidden */
 </script>
 </body>
 </html>
